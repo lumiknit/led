@@ -1,5 +1,6 @@
 use axum::{http::StatusCode, routing::get, Router};
 use tower_http::trace::{self, TraceLayer};
+use tower_http::services::ServeDir;
 use tracing::Level;
 
 fn new_api_router() -> Router {
@@ -10,7 +11,8 @@ fn new_api_router() -> Router {
 }
 
 fn new_static_router() -> Router {
-  Router::new().route("/", get(|| async { "Hello, World!" }))
+  let service = ServeDir::new("front/dist");
+  Router::new().nest_service("/", service)
 }
 
 fn new_router() -> Router {
