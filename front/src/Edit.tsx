@@ -1,40 +1,50 @@
-import React, { useRef } from "react";
+import { useRef, useState } from "react";
 
 const Edit = () => {
-  const listRef = useRef(null);
-  const inputRef = useRef(null);
+  const listRef = useRef<any>(null);
+  const inputRef = useRef<any>(null);
 
-  const onReturnKey = (e) => {
-    const val = inputRef.current.value;
-    inputRef.current.value = "";
+  const [codeList, setCodeList] = useState<any[]>([]);
 
-    listRef.current.innerHTML += val + "<br>";
+  const onReturnKey = () => {
+    const input = inputRef.current;
+    if(input !== null) {
+      const val = input.value;
+      input.value = "";
+
+      setCodeList(codeList.concat([val]));
+    }
   };
 
-  const onTextKeyDown = (e) => {
+  const onTextKeyDown = (e: any) => {
     switch(e.keyCode) {
     case 13:
       e.preventDefault();
-      return onReturnKey(e);
+      return onReturnKey();
     case 9: {
       e.preventDefault();
-      const oldVal = inputRef.current.value;
-      const start = inputRef.current.selectionStart;
-      const end = inputRef.current.selectionEnd;
-      inputRef.current.value = oldVal.substring(0, start) + "\t" + oldVal.substring(end);
-      inputRef.current.selectionStart = inputRef.current.selectionEnd = start + 1;
+      const input = inputRef.current;
+      if(input !== null) {
+        const oldVal = input.value;
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        input.value = oldVal.substring(0, start) + "\t" + oldVal.substring(end);
+        input.selectionStart = input.selectionEnd = start + 1;
+      }
     } break;
     }
   };
 
   return (
     <>
-      <div ref={listRef}>
-      </div>
-      <div className="fixed-bottom">
+      <div className="blocks" ref={listRef}>
         <div className="w-auto m-2">
-          <span className="badge bg-primary"> Test </span>
+          {codeList.map((val) => (
+            <span className="blk blk-blue">{val}</span>
+          ))}
         </div>
+      </div>
+      <div className="input-group-bottom">
         <div className="input-group w-auto m-2">
           <button className="btn btn-secondary" type="button">
             ⌘
