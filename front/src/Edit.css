@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Caladea:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caladea:ital,wght@0,400;0,700;1,400;1,700&family=Fira+Code:wght@300;400;500;600;700&display=swap');
+
+body {
+  margin: 0;
+  display: flex;
+}
+
+.blocks {
+  overflow: scroll;
+  padding-top: 50vh;
+  padding-bottom: 50vh;
+  width: 100vw;
+}
+
+.blk {
+  white-space: nowrap;
+  font-family: 'Caladea', serif;
+  font-weight: 400;
+  font-size: 1rem;
+  border-radius: 5px;
+  padding: 6px;
+  margin: 3px;
+  text-align: center;
+}
+
+.blk-bold {
+  font-weight: 900;
+}
+
+.blk-1 {
+}
+
+.blk-l {
+  border-radius: 5px 0 0 5px;
+  margin-right: 0.5px;
+}
+
+.blk-r {
+  border-radius: 0 5px 5px 0;
+  margin-left: 0.5px;
+}
+
+.blk-c {
+  border-radius: 0;
+  margin-left: 0.5px;
+  margin-right: 0.5px;
+}
+
+.blk-outline-black {
+  color: #000000;
+  border: 1px solid #000000;
+}
+
+.blk-outline-red {
+  color: #a5222f;
+  border: 1px solid #a5222f;
+}
+
+.blk-outline-green {
+  color: #396847;
+  border: 1px solid #396847;
+}
+
+.blk-outline-yellow {
+  color: #ac5402;
+  border: 1px solid #ac5402;
+}
+
+.blk-outline-blue {
+  color: #4863b6;
+  border: 1px solid #4863b6;
+}
+
+.blk-black {
+  color: #ffffff;
+  background-color: #000000;
+  border: 1px solid #000000;
+}
+
+.blk-red {
+  color: #ffffff;
+  background-color: #a5222f;
+  border: 1px solid #a5222f;
+}
+
+.blk-green {
+  color: #ffffff;
+  background-color: #396847;
+  border: 1px solid #396847;
+}
+
+.blk-yellow {
+  color: #ffffff;
+  background-color: #ac5402;
+  border: 1px solid #ac5402;
+}
+
+.blk-blue {
+  color: #ffffff;
+  background-color: #4863b6;
+  border: 1px solid #4863b6;
+}
+
+.input-group-bottom {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100vw;
+}
+
+.input-code {
+  font-family: 'Fira Code', monospace;
+  font-weight: 500;
+}
