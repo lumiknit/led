@@ -33,6 +33,15 @@ const Edit = () => {
       }
     } break;
     }
+    // Move scroll to bottom of input
+    const input = inputRef.current;
+    if(input !== null && window.visualViewport !== null) {
+      const box = input.getBoundingClientRect();
+      const y = window.pageYOffset + box.top + box.height;
+      const scrollY = 8 + y - window.visualViewport.height;
+      // Scroll to y to fit at bottom
+      window.scrollTo(0, scrollY);
+    }
   };
 
   return (

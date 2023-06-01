@@ -8,12 +8,13 @@ body {
 
 .blocks {
   overflow: scroll;
+  padding-top: 50vh;
+  padding-bottom: 50vh;
   width: 100vw;
-  height: 100vh;
-  white-space: nowrap;
 }
 
 .blk {
+  white-space: nowrap;
   font-family: 'Caladea', serif;
   font-weight: 400;
   font-size: 1rem;
