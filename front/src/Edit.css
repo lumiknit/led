@@ -67,6 +67,20 @@ body {
   user-select: none;
 }
 
+.code-chunk-selected {
+  border: 1px solid #000000;
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.code-cursor {
+  display: inline-block;
+  width: 2px;
+  color: #00000000;
+  background-color: #0000ff;
+  margin: 2px;
+}
+
 .float-btn {
   opacity: 0.7;
   position: fixed;

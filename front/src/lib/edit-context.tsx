@@ -1,21 +1,36 @@
 import Parser from 'web-tree-sitter';
 import detectIndent from './detect-indent';
 
+const comparePosition = (l: [number, number], r: [number, number]): boolean => {
+  if(l[0] === r[0]) {
+    if(l[1] === r[1]) return 0;
+    else if(l[1] < r[1]) return -1;
+    else return 1;
+  } else if(l[0] < r[0]) return -1;
+  else return 1;
+};
+
 class EditContext {
   // Metadata
   filename = '';
   type = 'txt';
   indent = '\t';
 
-  // Contents
   lineID = 0;
+
+  // Contents
   lineIDs = [0];
   lines = [''];
-  rendered: any[] = [null];
 
   // Cursor
   selectionStart: [number, number] = [0, 0];
   selectionEnd: [number, number] = [0, 0];
+
+  // Rendering
+  renderedSelectionStart: [number, number] = [0, 0];
+  renderedSelectionEnd: [number, number] = [0, 0];
+  rendered: any[] = [null];
+
 
   // Parser
   parser: Parser | null = null;
@@ -198,6 +213,27 @@ class EditContext {
     return this.lines.join('\n');
   }
 
+  checkWordInRenderSelection(start: [number, number], end: [number, number]) {
+    const s0 = comparePosition(start, this.renderedSelectionStart);
+    const s1 = comparePosition(start, this.renderedSelectionEnd);
+    const e0 = comparePosition(end, this.renderedSelectionStart);
+    const e1 = comparePosition(end, this.renderedSelectionEnd);
+    return (s0 >= 0 && s1 <= 0) || (e0 >= 0 && e1 <= 0);
+  }
+
+  moveCursor(line: number, col: number) {
+    this.selectionStart = [line, col];
+    this.selectionEnd = [line, col];
+  }
+
+  chunkOnClick = (word: string, line: number, col: number) => {
+    return (e: any) => {
+      console.log(line, col);
+      e.stopPropagation();
+      this.moveCursor(line, col);
+    };
+  }
+
   // Rendering
   renderLine(index: number) {
     const line = this.lines[index];
@@ -217,23 +253,61 @@ class EditContext {
         p++;
       } else break;
     }
-    const chunks = line.substring(p).trim().split(' ');
+    let chunks = [];
+    let i = 0;
+    while(i < line.length && (line[i] === ' ' || line[i] === '\t')) {
+      i++;
+    }
+    for(; i < line.length; i++) {
+      let j = i;
+      while(j < line.length && line[j] !== ' ' && line[j] !== '\t') {
+        j++;
+      }
+      if(j > i) {
+        chunks.push({
+          text: line.substring(i, j),
+          start: i,
+          end: j,
+        });
+        i = j;
+      }
+    }
+    if(chunks.length === 1) {
+      chunks[0].single = true;
+    } else if(chunks.length > 1) {
+      chunks[0].first = true;
+      chunks[chunks.length - 1].last = true;
+    }
+    // Find cursor position
+    if(this.renderedSelectionStart[0] === this.renderedSelectionEnd[0] &&
+      this.renderedSelectionStart[1] === this.renderedSelectionEnd[1] &&
+      this.renderedSelectionStart[0] === index) {
+      let i = 0;
+      while(i < chunks.length && chunks[i].start < this.renderedSelectionStart[1]) {
+        i++;
+      }
+      chunks.splice(i, 0, {
+        cursor: true,
+      });
+    }
     const r = (
       <div key={this.lineIDs[index]} className="code-line">
         <span className="code-indent">{'-'.repeat(indent)}</span>
         {
           chunks.map((word, i) => {
-            let chunk_shape = "code-chunk-c";
-            if(chunks.length === 1) {
-              chunk_shape = "code-chunk-1";
-            } else {
-              if(i === 0) {
-                chunk_shape = "code-chunk-l";
-              } else if(i === chunks.length - 1) {
-                chunk_shape = "code-chunk-r";
-              }
+            if(word.cursor) {
+              return <span key={i} className="code-cursor">|</span>;
             }
-            return <span key={i} className={chunk_shape}>{word}</span>;
+            let classes = "code-chunk-c";
+            if(word.single) classes = "code-chunk-1";
+            else if(word.first) classes = "code-chunk-l";
+            else if(word.last) classes = "code-chunk-r";
+            if(this.checkWordInRenderSelection([index, word.start], [index, word.end])) {
+              classes += " code-chunk-selected";
+            }
+            return <span key={i} className={classes} onClick={this.chunkOnClick(word.text, index, word.start)}>
+              {word.text}
+            </span>;
           })
         }
       </div>
@@ -242,6 +316,20 @@ class EditContext {
   }
 
   renderAll() {
+    // If selection changed, rerender changed selection
+    if(this.renderedSelectionStart[0] !== this.selectionStart[0] ||
+        this.renderedSelectionStart[1] !== this.selectionStart[1] ||
+        this.renderedSelectionEnd[0] !== this.selectionEnd[0] ||
+        this.renderedSelectionEnd[1] !== this.selectionEnd[1]) {
+      for(let i = this.renderedSelectionStart[0]; i <= this.renderedSelectionEnd[0]; i++) {
+        this.rendered[i] = null;
+      }
+      for(let i = this.selectionStart[0]; i <= this.selectionEnd[0]; i++) {
+        this.rendered[i] = null;
+      }
+      this.renderedSelectionStart = [this.selectionStart[0], this.selectionStart[1]];
+      this.renderedSelectionEnd = [this.selectionEnd[0], this.selectionEnd[1]];
+    }
     for (let i = 0; i < this.lines.length; i++) {
       if (this.rendered[i] !== null) {
         continue;
