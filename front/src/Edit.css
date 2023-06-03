@@ -6,15 +6,18 @@ body {
   display: flex;
 }
 
-.blocks {
+.code-area {
   overflow: scroll;
-  width: 100vw;
+  width: 100%;
+  margin-top: 80vh;
+  margin-bottom: 20vh;
 }
 
 .code-line {
   font-family: 'Caladea', serif;
   font-weight: 500;
   font-size: 1rem;
+  margin: 5px;
 }
 
 .code-indent {
@@ -25,8 +28,11 @@ body {
 
 .code-line-m {
   border-radius: 5px;
+  padding: 2px;
   color: #000000;
   border: 1px solid #00000040;
+  cursor: pointer;
+  user-select: none;
 }
 
 .float-btn {
@@ -37,9 +43,9 @@ body {
 }
 
 .input-group-bottom {
-  position: fixed;
+  position: sticky;
   left: 0;
-  bottom: 0;
+  bottom: 8px;
   width: 100vw;
 }
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 import EditContext from './lib/edit-context';
 import './Edit.css';
@@ -15,6 +15,7 @@ enum SpecialAction {
 }
 
 const Edit = () => {
+  const inputGroupRef = useRef<any>(null);
   const inputRef = useRef<any>(null);
   const rawTextRef = useRef<any>(null);
 
@@ -25,6 +26,34 @@ const Edit = () => {
   });
   const ectx = ctx.edit;
   const rerenderEdit = () => setCtx({ edit: ectx });
+
+  /*
+  useEffect(() => {
+    const adjustInputGroup = () => {
+      console.log("A");
+      const inputGroup = inputGroupRef.current;
+      if (inputGroup !== null) {
+        // Get virtual viewport
+        let h;
+        if(window.visualViewport === undefined) {
+          // Fallback
+          h = window.height;
+        } else {
+          h = window.visualViewport.height;
+        }
+        let rect = inputGroup.getBoundingClientRect();
+        inputGroup.style.top = (window.scrollY + h - rect.height) + 'px';
+        console.log(window.scrollY + h - rect.height);
+      }
+    };
+    window.addEventListener('scroll', adjustInputGroup);
+    window.addEventListener('resize', adjustInputGroup);
+    return () => {
+      window.removeEventListener('scroll', adjustInputGroup);
+      window.removeEventListener('resize', adjustInputGroup);
+    };
+  });
+  */
 
   const onReturnKey = () => {
     const input = inputRef.current;
@@ -55,15 +84,22 @@ const Edit = () => {
     e.preventDefault();
     switch (action) {
       case SpecialAction.RETURN:
-        return onReturnKey();
+        onReturnKey();
+        break;
       case SpecialAction.DOUBLE_SPACE:
-        return onDoubleSpace();
+        onDoubleSpace();
+        break;
       case SpecialAction.EMPTY_RETURN:
-        return onEmptyReturn();
+        onEmptyReturn();
+        break;
       case SpecialAction.EMPTY_SPACE:
-        return onEmptySpace();
+        onEmptySpace();
+        break;
       case SpecialAction.EMPTY_BACKSPACE:
-        return onEmptyBackspace();
+        onEmptyBackspace();
+        break;
+      default:
+        return;
     }
     // Focus to input
     const input = inputRef.current;
@@ -186,10 +222,10 @@ const Edit = () => {
         <RawText ref={rawTextRef} defaultValue={ectx.toRawString()} />
       ) : (
         <>
-          <div className="blocks">
-            <div className="w-auto m-2">{ectx.renderAll()}</div>
+          <div className="code-area">
+            {ectx.renderAll()}
           </div>
-          <div className="input-group-bottom">
+          <div className="input-group-bottom" ref={inputGroupRef}>
             <div className="input-group w-auto m-2">
               <button className="btn btn-secondary" type="button">
                 ⌘
