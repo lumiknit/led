@@ -1,0 +1,12 @@
+textarea.raw-text {
+  font-family: monospace;
+  font-weight: 500;
+  font-size: 1rem;
+  width: 100vw;
+  height: auto;
+  -moz-tab-size: 2;
+  -o-tab-size: 2;
+  tab-size: 2;
+  overflow: auto;
+  resize: none;
+}

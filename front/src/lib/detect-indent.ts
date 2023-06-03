@@ -22,10 +22,10 @@ const scanLine = (src: string, pos: number) => {
   return { pos, tab, indent };
 };
 
-const detectIndent = (src: string, MAX_LINES: number = 1024) => {
+const detectIndent = (src: string, MAX_LINES = 1024) => {
   let pos = 0;
   let indent = undefined;
-  for(let i = 0; i < MAX_LINES && pos < src.length; i++) {
+  for (let i = 0; i < MAX_LINES && pos < src.length; i++) {
     const { pos: newPos, tab, indent: newIndent } = scanLine(src, pos);
     if (tab) {
       return '\t';
@@ -34,11 +34,10 @@ const detectIndent = (src: string, MAX_LINES: number = 1024) => {
     }
     pos = newPos;
   }
-  if(indent === undefined) {
+  if (indent === undefined) {
     return '\t';
   }
   return ' '.repeat(indent);
 };
 
 export default detectIndent;
-
