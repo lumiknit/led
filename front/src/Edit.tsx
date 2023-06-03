@@ -27,42 +27,28 @@ const Edit = () => {
   const ectx = ctx.edit;
   const rerenderEdit = () => setCtx({ edit: ectx });
 
-  /*
-  useEffect(() => {
-    const adjustInputGroup = () => {
-      console.log("A");
-      const inputGroup = inputGroupRef.current;
-      if (inputGroup !== null) {
-        // Get virtual viewport
-        let h;
-        if(window.visualViewport === undefined) {
-          // Fallback
-          h = window.height;
-        } else {
-          h = window.visualViewport.height;
-        }
-        let rect = inputGroup.getBoundingClientRect();
-        inputGroup.style.top = (window.scrollY + h - rect.height) + 'px';
-        console.log(window.scrollY + h - rect.height);
-      }
-    };
-    window.addEventListener('scroll', adjustInputGroup);
-    window.addEventListener('resize', adjustInputGroup);
-    return () => {
-      window.removeEventListener('scroll', adjustInputGroup);
-      window.removeEventListener('resize', adjustInputGroup);
-    };
-  });
-  */
+  const cleanInput = () => {
+    const input = inputRef.current;
+    if (input !== null) {
+      input.value = '';
+      const hiddenInp = document.createElement('input');
+      hiddenInp.setAttribute('type', 'text');
+      document.body.appendChild(hiddenInp);
+      hiddenInp.focus();
+      window.setTimeout(() => {
+        input.focus();
+        hiddenInp.remove();
+      }, 0);
+    }
+  };
 
   const onReturnKey = () => {
     const input = inputRef.current;
     if (input !== null) {
       const val = input.value;
-      input.value = '';
-      ectx.insert(val);
+      cleanInput();
+      ectx.insert(val + ' ');
       rerenderEdit();
-      console.log(ctx.edit);
     }
   };
 

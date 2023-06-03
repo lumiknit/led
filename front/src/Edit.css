@@ -24,13 +24,45 @@ body {
   border-radius: 5px;
   color: #88888880;
   border: 1px solid #88888840;
+  padding: 2px 5px;
 }
 
-.code-line-m {
+.code-chunk-1 {
+  padding: 2px 5px;
+  margin: 5px;
   border-radius: 5px;
-  padding: 2px;
-  color: #000000;
   border: 1px solid #00000040;
+  color: #000000;
+  user-select: none;
+  cursor: pointer;
+}
+
+.code-chunk-l {
+  padding: 2px 5px;
+  margin: 5px 1px 5px 5px;
+  border-radius: 5px 0 0 5px;
+  border: 1px solid #00000040;
+  color: #000000;
+  cursor: pointer;
+  user-select: none;
+}
+
+.code-chunk-c {
+  padding: 2px 5px;
+  margin: 5px 1px;
+  border-radius: 0;
+  border: 1px solid #00000040;
+  color: #000000;
+  cursor: pointer;
+  user-select: none;
+}
+
+.code-chunk-r {
+  padding: 2px 5px;
+  margin: 5px 5px 5px 1px;
+  border-radius: 0 5px 5px 0;
+  border: 1px solid #00000040;
+  color: #000000;
   cursor: pointer;
   user-select: none;
 }

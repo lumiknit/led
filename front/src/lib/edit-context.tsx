@@ -1,4 +1,4 @@
-//import Parser from 'web-tree-sitter';
+import Parser from 'web-tree-sitter';
 import detectIndent from './detect-indent';
 
 class EditContext {
@@ -18,7 +18,19 @@ class EditContext {
   selectionEnd: [number, number] = [0, 0];
 
   // Parser
-  //parser: Parser | null = null;
+  parser: Parser | null = null;
+
+  constructor() {
+    Parser.init({
+      locateFile(scriptName: string, _scriptDirectory: string) {
+        return `/wasm/${scriptName}`;
+      },
+    }).then(async () => {
+      this.parser = new Parser;
+      const Lua = await Parser.Language.load("/wasm/tree-sitter-lua.wasm");
+      this.parser.setLanguage(Lua);
+    });
+  }
 
   loadContent(filename: string, content: string) {
     this.filename = filename;
@@ -32,29 +44,6 @@ class EditContext {
 
   setType(type: string) {
     this.type = type;
-    /*
-      Parser.init({
-        locateFile(scriptName: string, _scriptDirectory: string) {
-          return `/wasm/${scriptName}`;
-        },
-      }).then(async () => {
-        console.log("A");
-
-        const parser = new Parser;
-        const Lua = await Parser.Language.load("/wasm/tree-sitter-lua.wasm");
-        parser.setLanguage(Lua);
-
-        const src = `local a = 10\nprint(a)`;
-        const tree = parser.parse(src);
-        if(tree.rootNode !== null) {
-          console.log(tree.rootNode.toString());
-          let c = tree.rootNode.child(1);
-          if(c !== null) {
-            console.log(c.firstChild);
-          }
-        }
-      });
-    */
   }
 
   // Position operations
@@ -97,6 +86,18 @@ class EditContext {
   // Line operations
   dirtyLine(index: number) {
     this.rendered[index] = null;
+  }
+
+  parse() {
+    // Run parser
+    if (this.parser !== null) {
+      const tree = this.parser.parse((_index, position) => {
+        let line = this.lines[position.row];
+        if(line) return line.slice(position.column);
+      });
+      console.log(tree.childCount);
+      console.log(tree.rootNode.child(0).toString());
+    }
   }
 
   insertLine(index: number, line = '') {
@@ -216,12 +217,25 @@ class EditContext {
         p++;
       } else break;
     }
+    const chunks = line.substring(p).trim().split(' ');
     const r = (
       <div key={this.lineIDs[index]} className="code-line">
-        {indent > 0 ? (
-          <span className="code-indent">{'-'.repeat(indent)}</span>
-        ) : null}
-        <span className="code-line-m">{line.substring(p)}</span>
+        <span className="code-indent">{'-'.repeat(indent)}</span>
+        {
+          chunks.map((word, i) => {
+            let chunk_shape = "code-chunk-c";
+            if(chunks.length === 1) {
+              chunk_shape = "code-chunk-1";
+            } else {
+              if(i === 0) {
+                chunk_shape = "code-chunk-l";
+              } else if(i === chunks.length - 1) {
+                chunk_shape = "code-chunk-r";
+              }
+            }
+            return <span key={i} className={chunk_shape}>{word}</span>;
+          })
+        }
       </div>
     );
     this.rendered[index] = r;
