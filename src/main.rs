@@ -15,9 +15,15 @@ fn new_static_router() -> Router {
   Router::new().nest_service("/", service)
 }
 
+fn new_wasm_router() -> Router {
+  let service = ServeDir::new("front/wasm");
+  Router::new().nest_service("/", service)
+}
+
 fn new_router() -> Router {
   Router::new()
     .nest("/-", new_api_router())
+    .nest("/wasm", new_wasm_router())
     .nest("/", new_static_router())
     .layer(
       TraceLayer::new_for_http()

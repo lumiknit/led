@@ -8,98 +8,43 @@ body {
 
 .blocks {
   overflow: scroll;
-  padding-top: 50vh;
-  padding-bottom: 50vh;
   width: 100vw;
 }
 
-.blk {
-  white-space: nowrap;
-  font-family: 'Caladea', serif;
-  font-weight: 400;
+textarea.code-raw {
+  font-family: 'Fira Code', monospace;
+  font-weight: 500;
   font-size: 1rem;
+  width: 100vw;
+  height: 100vh;
+  -moz-tab-size : 2;
+    -o-tab-size : 2;
+       tab-size : 2;
+}
+
+.code-line {
+  font-family: 'Caladea', serif;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.code-indent {
   border-radius: 5px;
-  padding: 6px;
-  margin: 3px;
-  text-align: center;
+  color: #88888880;
+  border: 1px solid #88888840;
 }
 
-.blk-bold {
-  font-weight: 900;
-}
-
-.blk-1 {
-}
-
-.blk-l {
-  border-radius: 5px 0 0 5px;
-  margin-right: 0.5px;
-}
-
-.blk-r {
-  border-radius: 0 5px 5px 0;
-  margin-left: 0.5px;
-}
-
-.blk-c {
-  border-radius: 0;
-  margin-left: 0.5px;
-  margin-right: 0.5px;
-}
-
-.blk-outline-black {
+.code-line-m {
+  border-radius: 5px;
   color: #000000;
-  border: 1px solid #000000;
+  border: 1px solid #00000040;
 }
 
-.blk-outline-red {
-  color: #a5222f;
-  border: 1px solid #a5222f;
-}
-
-.blk-outline-green {
-  color: #396847;
-  border: 1px solid #396847;
-}
-
-.blk-outline-yellow {
-  color: #ac5402;
-  border: 1px solid #ac5402;
-}
-
-.blk-outline-blue {
-  color: #4863b6;
-  border: 1px solid #4863b6;
-}
-
-.blk-black {
-  color: #ffffff;
-  background-color: #000000;
-  border: 1px solid #000000;
-}
-
-.blk-red {
-  color: #ffffff;
-  background-color: #a5222f;
-  border: 1px solid #a5222f;
-}
-
-.blk-green {
-  color: #ffffff;
-  background-color: #396847;
-  border: 1px solid #396847;
-}
-
-.blk-yellow {
-  color: #ffffff;
-  background-color: #ac5402;
-  border: 1px solid #ac5402;
-}
-
-.blk-blue {
-  color: #ffffff;
-  background-color: #4863b6;
-  border: 1px solid #4863b6;
+.float-btn {
+  opacity: 0.7;
+  position: fixed;
+  right: 4px;
+  top: 4px;
 }
 
 .input-group-bottom {

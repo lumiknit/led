@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 
+import EditContext from './lib/edit-context';
 import './Edit.css';
 
 enum SpecialAction {
@@ -11,76 +12,43 @@ enum SpecialAction {
   EMPTY_BACKSPACE,
 };
 
-
-class Chunk {
-  parent: Chunk | null = null;
-  name: string;
-  args: Chunk[];
-  sub: Chunk[];
-
-  constructor(name: string, parent: Chunk | null = null) {
-    this.parent = parent;
-    this.name = name;
-    this.args = [];
-    this.sub = [];
-  }
-
-  isRoot() {
-    return this.parent === null;
-  }
-
-  argIndex() {
-    if(this.parent === null) {
-      return -1;
-    }
-    return this.parent.args.indexOf(this);
-  }
-
-  subIndex() {
-    if(this.parent === null) {
-      return -1;
-    }
-    return this.parent.sub.indexOf(this);
-  }
-
-  toString(indent: number = 0) {
-    let hd = `${this.name}(${this.args.map((x) => x.toString(indent + 1)).join(", ")})`;
-    if(this.sub.length > 0) {
-      hd += " {";
-      for(const sub of this.sub) {
-        hd += '\n' + ' '.repeat((indent + 1) * 2) + sub.toString(indent + 1) + ",";
-      }
-      hd += '\n' + ' '.repeat(indent * 2) + "}";
-    }
-    return hd;
-  }
-}
-
-class EditContext {
-  constructor() {
-  }
-
-  insertText() {
-  }
-}
-
 const Edit = () => {
   const listRef = useRef<any>(null);
   const inputRef = useRef<any>(null);
+  const rawTARef = useRef<any>(null);
 
-  const [codeList, setCodeList] = useState<any[]>([]);
+  const [rawMode, setRawMode] = useState<boolean>(false);
+
+  const [ctx, setCtx] = useState<{edit: EditContext}>({edit: new EditContext()});
+  const ectx = ctx.edit;
+  const rerenderEdit = () => setCtx({edit: ectx});
 
   const onReturnKey = () => {
     const input = inputRef.current;
     if(input !== null) {
       const val = input.value;
       input.value = "";
-
-      setCodeList(codeList.concat([val]));
+      ectx.insert(val);
+      rerenderEdit();
+      console.log(ctx.edit);
     }
   };
 
-  const handleSpecialAction = (action: SpecialAction) => {
+  const onDoubleSpace = () => {};
+  const onEmptyReturn = () => {
+    ectx.insert("\n");
+    rerenderEdit();
+  };
+  const onEmptySpace = () => {
+    ectx.indentLine();
+    rerenderEdit();
+  };
+  const onEmptyBackspace = () => {
+    ectx.delete(1);
+    rerenderEdit();
+  };
+
+  const handleSpecialAction = (e: any, action: SpecialAction) => {
     e.preventDefault();
     switch(action) {
     case SpecialAction.RETURN:
@@ -94,6 +62,11 @@ const Edit = () => {
     case SpecialAction.EMPTY_BACKSPACE:
       return onEmptyBackspace();
     }
+    // Focus to input
+    const input = inputRef.current;
+    if(input !== null) {
+      input.focus();
+    }
   };
 
   const onTextKeyDown = (e: any) => {
@@ -106,7 +79,7 @@ const Edit = () => {
     switch(e.keyCode) {
     case 8: { // Backspace
       if(input.value.length === 0) {
-        return handleSpecialAction(SpecialAction.EMPTY_BACKSPACE);
+        return handleSpecialAction(e, SpecialAction.EMPTY_BACKSPACE);
       }
     } break;
     case 9: { // Tab key
@@ -119,18 +92,18 @@ const Edit = () => {
     } break;
     case 13: // Return key
       if(input.value.length === 0) {
-        return handleSpecialAction(SpecialAction.EMPTY_RETURN);
+        return handleSpecialAction(e, SpecialAction.EMPTY_RETURN);
       } else {
-        return handleSpecialAction(SpecialAction.RETURN);}
+        return handleSpecialAction(e, SpecialAction.RETURN);
       }
     case 32: { // Space key
       if(input.value.length === 0) {
-        return handleSpecialAction(SpecialAction.EMPTY_SPACE);
+        return handleSpecialAction(e, SpecialAction.EMPTY_SPACE);
       }
     }
+    }
     // Move scroll to bottom of input
-    const input = inputRef.current;
-    if(input !== null && window.visualViewport !== null) {
+    if(window.visualViewport !== null) {
       const box = input.getBoundingClientRect();
       const y = window.pageYOffset + box.top + box.height;
       const scrollY = 8 + y - window.visualViewport.height;
@@ -146,41 +119,99 @@ const Edit = () => {
       return;
     }
     if(input.value.endsWith("  ")) {
-      return handleSpecialAction(SpecialAction.DOUBLE_SPACE);
+      return handleSpecialAction(e, SpecialAction.DOUBLE_SPACE);
     }
   };
 
+  const onReturnButton = (e: any) => {
+    let input = inputRef.current;
+    if(input !== null) {
+      if(input.value.length === 0) {
+        return handleSpecialAction(e, SpecialAction.EMPTY_RETURN);
+      } else {
+        return handleSpecialAction(e, SpecialAction.RETURN);
+      }
+    }
+  };
 
-  let chunk = new Chunk("root");
-  chunk.args.push(new Chunk("print"));
-  chunk.sub.push(new Chunk("test"));
-  console.log(chunk.toString());
+  const onRawTAKeyDown = (e: any) => {
+    // Check tab
+    if(e.keyCode === 9) {
+      e.preventDefault();
+      const oldVal = e.target.value;
+      const start = e.target.selectionStart;
+      const end = e.target.selectionEnd;
+      e.target.value = oldVal.substring(0, start) + "\t" + oldVal.substring(end);
+      e.target.selectionStart = e.target.selectionEnd = start + 1;
+    }
+  };
+
+  const toggleRawMode = () => {
+    if(rawMode) {
+      let text = undefined;
+      if(rawTARef.current !== null) {
+        text = rawTARef.current.value;
+      }
+      setRawMode(false);
+      if(text !== undefined) {
+        ectx.loadContent('<raw>', text);
+      }
+    } else {
+      setRawMode(true);
+    }
+  };
 
   return (
     <>
-      <div className="blocks" ref={listRef}>
-        <div className="w-auto m-2">
-          {codeList.map((val) => (
-            <span className="blk blk-blue">{val}</span>
-          ))}
-        </div>
-        <span className="blk blk-l blk-blue"> if </span><span className="blk blk-c blk-outline-black"> f </span><span className="blk blk-c blk-outline-red"> == </span><span className="blk blk-r blk-outline-black"> 20 </span>
-      </div>
-      <div className="input-group-bottom">
-        <div className="input-group w-auto m-2">
-          <button className="btn btn-secondary" type="button">
-            ⌘
+      <div className="float-btn">
+        <div className="dropdown">
+          <button className="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+           ☰ 
           </button>
-          <input ref={inputRef}
-            type="text"
-            className="form-control input-code"
-            placeholder="code"
-            onKeyDown={onTextKeyDown} />
-          <button className="btn btn-primary" type="button" onClick={onReturnKey}>
-            ⏎
-          </button>
+          <ul className="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+            <li><a className="dropdown-item" href="#" onClick={toggleRawMode}>
+              {rawMode ? "Block Mode" : "Raw Mode"}
+            </a></li>
+          </ul>
         </div>
       </div>
+      {
+        rawMode ? (
+          <>
+            <textarea ref={rawTARef}
+              className="form-control code-raw"
+              onKeyDown={onRawTAKeyDown}
+              defaultValue={ctx.edit.toRawString()} />
+          </>
+        ) : (
+          <>
+            <div className="blocks" ref={listRef}>
+              <div className="w-auto m-2">
+                {ctx.edit.renderAll()}
+              </div>
+            </div>
+            <div className="input-group-bottom">
+              <div className="input-group w-auto m-2">
+                <button className="btn btn-secondary" type="button">
+                  ⌘
+                </button>
+                <input ref={inputRef}
+                  type="text"
+                  className="form-control input-code"
+                  placeholder="code"
+                  onKeyDown={onTextKeyDown}
+                  onKeyUp={onTextKeyUp}
+                />
+                <button className="btn btn-primary"
+                    type="button"
+                    onClick={onReturnButton}>
+                  ⏎
+                </button>
+              </div>
+            </div>
+          </>
+        )
+      }
     </>
   );
 };
