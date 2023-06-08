@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 
 import EditContext from './lib/edit-context';
 import './Edit.css';
@@ -52,7 +52,9 @@ const Edit = () => {
     }
   };
 
-  const onDoubleSpace = () => {};
+  const onDoubleSpace = () => {
+    console.log('A');
+  };
   const onEmptyReturn = () => {
     ectx.insert('\n');
     rerenderEdit();
@@ -208,9 +210,7 @@ const Edit = () => {
         <RawText ref={rawTextRef} defaultValue={ectx.toRawString()} />
       ) : (
         <>
-          <div className="code-area">
-            {ectx.renderAll()}
-          </div>
+          <div className="code-area">{ectx.renderAll()}</div>
           <div className="input-group-bottom" ref={inputGroupRef}>
             <div className="input-group w-auto m-2">
               <button className="btn btn-secondary" type="button">

@@ -1,14 +1,8 @@
 import Parser from 'web-tree-sitter';
 import detectIndent from './detect-indent';
+import NaiveParser from './naive-parser';
 
-const comparePosition = (l: [number, number], r: [number, number]): boolean => {
-  if(l[0] === r[0]) {
-    if(l[1] === r[1]) return 0;
-    else if(l[1] < r[1]) return -1;
-    else return 1;
-  } else if(l[0] < r[0]) return -1;
-  else return 1;
-};
+import { Pos, TextRange } from './text-range';
 
 class EditContext {
   // Metadata
@@ -23,17 +17,16 @@ class EditContext {
   lines = [''];
 
   // Cursor
-  selectionStart: [number, number] = [0, 0];
-  selectionEnd: [number, number] = [0, 0];
+  selection = new TextRange(new Pos(0, 0), new Pos(0, 0));
 
   // Rendering
-  renderedSelectionStart: [number, number] = [0, 0];
-  renderedSelectionEnd: [number, number] = [0, 0];
+  renderedSelection = new TextRange(new Pos(0, 0), new Pos(0, 0));
   rendered: any[] = [null];
-
 
   // Parser
   parser: Parser | null = null;
+
+  naiveParser: NaiveParser = new NaiveParser();
 
   constructor() {
     Parser.init({
@@ -41,8 +34,8 @@ class EditContext {
         return `/wasm/${scriptName}`;
       },
     }).then(async () => {
-      this.parser = new Parser;
-      const Lua = await Parser.Language.load("/wasm/tree-sitter-lua.wasm");
+      this.parser = new Parser();
+      const Lua = await Parser.Language.load('/wasm/tree-sitter-lua.wasm');
       this.parser.setLanguage(Lua);
     });
   }
@@ -53,8 +46,7 @@ class EditContext {
     this.rendered = new Array(this.lines.length).fill(null);
     this.indent = detectIndent(content);
     // Reset cursor
-    this.selectionStart = [0, 0];
-    this.selectionEnd = [0, 0];
+    this.selection = new TextRange(new Pos(0, 0), new Pos(0, 0));
   }
 
   setType(type: string) {
@@ -62,40 +54,38 @@ class EditContext {
   }
 
   // Position operations
-  getMovedCursor(cursor: [number, number], n: number): [number, number] {
-    const [line, col] = cursor;
-    let newLine = line;
-    let newCol = col;
+  getMovedCursor(cursor: Pos, n: number): Pos {
+    const c = cursor.clone();
     while (n > 0) {
       // Move forward
-      const lineLen = this.lines[newLine].length;
-      if (newCol + n <= lineLen) {
-        newCol += n;
+      const lineLen = this.lines[c.line].length;
+      if (c.col + n <= lineLen) {
+        c.col += n;
         n = 0;
-      } else if (newLine >= this.lines.length - 1) {
-        newCol = lineLen;
+      } else if (c.line >= this.lines.length - 1) {
+        c.col = lineLen;
         n = 0;
       } else {
-        n -= lineLen - newCol + 1;
-        newCol = 0;
-        newLine += 1;
+        n -= lineLen - c.col + 1;
+        c.col = 0;
+        c.line += 1;
       }
     }
     while (n < 0) {
       // Move backward
-      if (newCol + n >= 0) {
-        newCol += n;
+      if (c.col + n >= 0) {
+        c.col += n;
         n = 0;
-      } else if (newLine <= 0) {
-        newCol = 0;
+      } else if (c.line <= 0) {
+        c.col = 0;
         n = 0;
       } else {
-        n += newCol + 1;
-        newLine -= 1;
-        newCol = this.lines[newLine].length;
+        n += c.col + 1;
+        c.line -= 1;
+        c.col = this.lines[c.line].length;
       }
     }
-    return [newLine, newCol];
+    return c;
   }
 
   // Line operations
@@ -106,12 +96,18 @@ class EditContext {
   parse() {
     // Run parser
     if (this.parser !== null) {
-      const tree = this.parser.parse((_index, position) => {
+      /*
+      const tree = this.parser.parse((_index, position: any) => {
         let line = this.lines[position.row];
         if(line) return line.slice(position.column);
       });
       console.log(tree.childCount);
-      console.log(tree.rootNode.child(0).toString());
+      let rc = tree.rootNode.child(0);
+      if(rc !== null) {
+        console.log(rc.toString());
+      }
+      */
+      console.log('TODO');
     }
   }
 
@@ -130,79 +126,103 @@ class EditContext {
 
   indentLine(line: number | null = null) {
     if (line === null) {
-      line = this.selectionStart[0];
+      line = this.selection.start.line;
     }
     this.lines[line] = this.indent + this.lines[line];
-    if (this.selectionStart[0] === line) {
-      this.selectionStart[1] += this.indent.length;
+    if (this.selection.start.line === line) {
+      this.selection.start.col += this.indent.length;
     }
-    if (this.selectionEnd[0] === line) {
-      this.selectionEnd[1] += this.indent.length;
+    if (this.selection.end.line === line) {
+      this.selection.end.col += this.indent.length;
+    }
+    this.dirtyLine(line);
+  }
+
+  outdentLine(line: number | null = null) {
+    if (line === null) {
+      line = this.selection.start.line;
+    }
+    let outdented = 0;
+    if (this.lines[line].startsWith(this.indent)) {
+      this.lines[line] = this.lines[line].substring(this.indent.length);
+      outdented = this.indent.length;
+    } else if (
+      this.lines[line].startsWith('\t') ||
+      this.lines[line].startsWith(' ')
+    ) {
+      this.lines[line] = this.lines[line].substring(1);
+      outdented = 1;
+    }
+    if (this.selection.start.line === line) {
+      this.selection.start.col -= outdented;
+    }
+    if (this.selection.end.line === line) {
+      this.selection.end.col -= outdented;
     }
     this.dirtyLine(line);
   }
 
   // Selection operations
-  isSelectionEmpty() {
-    const lineEq = this.selectionStart[0] === this.selectionEnd[0];
-    const colEq = this.selectionStart[1] === this.selectionEnd[1];
-    return lineEq && colEq;
-  }
-
   deleteSelection() {
-    const [startLine, startCol] = this.selectionStart;
-    const [endLine, endCol] = this.selectionEnd;
-    if (startLine === endLine) {
+    if (this.selection.start.line === this.selection.end.line) {
       // Delete within line
-      const line = this.lines[startLine];
-      this.lines[startLine] =
-        line.substring(0, startCol) + line.substring(endCol);
-      this.dirtyLine(startLine);
+      const line = this.lines[this.selection.start.line];
+      this.lines[this.selection.start.line] =
+        line.substring(0, this.selection.start.col) +
+        line.substring(this.selection.end.col);
+      this.dirtyLine(this.selection.start.line);
     } else {
       // Delete across lines
-      const line = this.lines[startLine];
-      this.lines[startLine] = line.substring(0, startCol);
-      this.lines[startLine] += this.lines[endLine].substring(endCol);
-      this.deleteLines(startLine + 1, endLine + 1);
-      this.dirtyLine(startLine);
+      const line = this.lines[this.selection.start.line];
+      this.lines[this.selection.start.line] = line.substring(
+        0,
+        this.selection.start.col,
+      );
+      this.lines[this.selection.start.line] += this.lines[
+        this.selection.end.line
+      ].substring(this.selection.end.col);
+      this.deleteLines(
+        this.selection.start.line + 1,
+        this.selection.end.line + 1,
+      );
+      this.dirtyLine(this.selection.start.line);
     }
-    this.selectionStart = [startLine, startCol];
-    this.selectionEnd = [startLine, startCol];
+    this.selection = new TextRange(this.selection.start, this.selection.start);
   }
 
   // Cursor operations
   insert(str: string) {
     // If selection is not empty, delete selection first
-    if (!this.isSelectionEmpty()) {
+    if (!this.selection.empty()) {
       this.deleteSelection();
     }
     // Split string into lines
     const lines = str.split('\n');
     // Insert first line
-    const [startLine, startCol] = this.selectionStart;
-    const line = this.lines[startLine];
-    this.lines[startLine] = line.substring(0, startCol) + lines[0];
-    this.dirtyLine(startLine);
+    const line = this.lines[this.selection.start.line];
+    this.lines[this.selection.start.line] =
+      line.substring(0, this.selection.start.col) + lines[0];
+    this.dirtyLine(this.selection.start.line);
     // Insert rest lines
     for (let i = 1; i < lines.length; i++) {
-      this.insertLine(startLine + i, lines[i]);
+      this.insertLine(this.selection.start.line + i, lines[i]);
     }
     // Put cursor at the end of the last line
-    const endLine = startLine + lines.length - 1;
+    const endLine = this.selection.start.line + lines.length - 1;
     const endCol = this.lines[endLine].length;
-    this.selectionStart = [endLine, endCol];
-    this.selectionEnd = [endLine, endCol];
-    this.lines[endLine] += line.substring(startCol);
+    const endPos = new Pos(endLine, endCol);
+    this.selection = new TextRange(endPos, endPos);
+    this.lines[endLine] += line.substring(this.selection.start.col);
   }
 
   delete(n: number) {
     // If selection is not empty, delete selection first
-    if (this.isSelectionEmpty()) {
-      const cur = this.getMovedCursor(this.selectionStart, -n);
+    if (this.selection.empty()) {
+      const cur = this.getMovedCursor(this.selection.start, -n);
       if (n > 0) {
-        this.selectionStart = cur;
+        this.selection.start = cur;
       } else {
-        this.selectionEnd = cur;
+        this.selection.end = cur;
       }
     }
     this.deleteSelection();
@@ -213,122 +233,72 @@ class EditContext {
     return this.lines.join('\n');
   }
 
-  checkWordInRenderSelection(start: [number, number], end: [number, number]) {
-    const s0 = comparePosition(start, this.renderedSelectionStart);
-    const s1 = comparePosition(start, this.renderedSelectionEnd);
-    const e0 = comparePosition(end, this.renderedSelectionStart);
-    const e1 = comparePosition(end, this.renderedSelectionEnd);
-    return (s0 >= 0 && s1 <= 0) || (e0 >= 0 && e1 <= 0);
-  }
-
   moveCursor(line: number, col: number) {
-    this.selectionStart = [line, col];
-    this.selectionEnd = [line, col];
+    const newPos = new Pos(line, col);
+    this.selection = new TextRange(newPos, newPos);
   }
 
-  chunkOnClick = (word: string, line: number, col: number) => {
+  chunkOnClick = (_word: string, range: TextRange) => {
     return (e: any) => {
-      console.log(line, col);
+      console.log(range.toString());
       e.stopPropagation();
-      this.moveCursor(line, col);
+      this.moveCursor(range.end.line, range.end.col);
     };
-  }
+  };
 
   // Rendering
   renderLine(index: number) {
     const line = this.lines[index];
-    // Remove indentation
-    let indent = 0;
-    let p = 0;
-    for (;;) {
-      if (line[p] === ' ') {
-        let i = 0;
-        while (i < this.indent.length && line[p] === ' ') {
-          p++;
-          i++;
-        }
-        indent++;
-      } else if (line[p] === '\t') {
-        indent++;
-        p++;
-      } else break;
-    }
-    let chunks = [];
-    let i = 0;
-    while(i < line.length && (line[i] === ' ' || line[i] === '\t')) {
-      i++;
-    }
-    for(; i < line.length; i++) {
-      let j = i;
-      while(j < line.length && line[j] !== ' ' && line[j] !== '\t') {
-        j++;
+    // Guess indent size
+    const indent = this.naiveParser.getIndentLevel(line, this.indent);
+    const ranges = this.naiveParser.splitLine(index, line);
+    // Render
+    // Indent element
+    const xIndent = <span className="code-indent">{'-'.repeat(indent)}</span>;
+    // Other elements
+    const xElements = ranges.map((range, i) => {
+      const classes = 'code-chunk';
+      let word = line.substring(range.start.col, range.end.col);
+      const sym = this.naiveParser.symbolMap.get(word);
+      if (sym !== undefined) {
+        word = sym;
       }
-      if(j > i) {
-        chunks.push({
-          text: line.substring(i, j),
-          start: i,
-          end: j,
-        });
-        i = j;
-      }
-    }
-    if(chunks.length === 1) {
-      chunks[0].single = true;
-    } else if(chunks.length > 1) {
-      chunks[0].first = true;
-      chunks[chunks.length - 1].last = true;
-    }
-    // Find cursor position
-    if(this.renderedSelectionStart[0] === this.renderedSelectionEnd[0] &&
-      this.renderedSelectionStart[1] === this.renderedSelectionEnd[1] &&
-      this.renderedSelectionStart[0] === index) {
-      let i = 0;
-      while(i < chunks.length && chunks[i].start < this.renderedSelectionStart[1]) {
-        i++;
-      }
-      chunks.splice(i, 0, {
-        cursor: true,
-      });
-    }
-    const r = (
+      return (
+        <span
+          key={i}
+          className={classes}
+          onClick={this.chunkOnClick(word, range)}
+        >
+          {word}
+        </span>
+      );
+    });
+    this.rendered[index] = (
       <div key={this.lineIDs[index]} className="code-line">
-        <span className="code-indent">{'-'.repeat(indent)}</span>
-        {
-          chunks.map((word, i) => {
-            if(word.cursor) {
-              return <span key={i} className="code-cursor">|</span>;
-            }
-            let classes = "code-chunk-c";
-            if(word.single) classes = "code-chunk-1";
-            else if(word.first) classes = "code-chunk-l";
-            else if(word.last) classes = "code-chunk-r";
-            if(this.checkWordInRenderSelection([index, word.start], [index, word.end])) {
-              classes += " code-chunk-selected";
-            }
-            return <span key={i} className={classes} onClick={this.chunkOnClick(word.text, index, word.start)}>
-              {word.text}
-            </span>;
-          })
-        }
+        {xIndent}
+        {xElements}
       </div>
     );
-    this.rendered[index] = r;
   }
 
   renderAll() {
     // If selection changed, rerender changed selection
-    if(this.renderedSelectionStart[0] !== this.selectionStart[0] ||
-        this.renderedSelectionStart[1] !== this.selectionStart[1] ||
-        this.renderedSelectionEnd[0] !== this.selectionEnd[0] ||
-        this.renderedSelectionEnd[1] !== this.selectionEnd[1]) {
-      for(let i = this.renderedSelectionStart[0]; i <= this.renderedSelectionEnd[0]; i++) {
+    if (!this.renderedSelection.equals(this.selection)) {
+      for (
+        let i = this.renderedSelection.start.line;
+        i <= this.renderedSelection.end.line;
+        i++
+      ) {
         this.rendered[i] = null;
       }
-      for(let i = this.selectionStart[0]; i <= this.selectionEnd[0]; i++) {
+      for (
+        let i = this.selection.start.line;
+        i <= this.selection.end.line;
+        i++
+      ) {
         this.rendered[i] = null;
       }
-      this.renderedSelectionStart = [this.selectionStart[0], this.selectionStart[1]];
-      this.renderedSelectionEnd = [this.selectionEnd[0], this.selectionEnd[1]];
+      this.renderedSelection = this.selection.clone();
     }
     for (let i = 0; i < this.lines.length; i++) {
       if (this.rendered[i] !== null) {

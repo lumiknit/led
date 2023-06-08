@@ -9,4 +9,5 @@ textarea.raw-text {
   tab-size: 2;
   overflow: auto;
   resize: none;
+  margin-top: 48px;
 }

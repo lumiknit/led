@@ -16,59 +16,40 @@ body {
 .code-line {
   font-family: 'Caladea', serif;
   font-weight: 500;
-  font-size: 1rem;
-  margin: 5px;
+  font-size: 16px;
+  margin: 8px;
+  word-break: break-all;
+  word-wrap: break-word;
 }
 
 .code-indent {
+  color: #0040f080;
+  padding: 1px 1px;
+  border: 1px solid #0040f020;
   border-radius: 5px;
-  color: #88888880;
-  border: 1px solid #88888840;
-  padding: 2px 5px;
 }
 
-.code-chunk-1 {
-  padding: 2px 5px;
-  margin: 5px;
-  border-radius: 5px;
-  border: 1px solid #00000040;
-  color: #000000;
-  user-select: none;
-  cursor: pointer;
-}
-
-.code-chunk-l {
-  padding: 2px 5px;
-  margin: 5px 1px 5px 5px;
-  border-radius: 5px 0 0 5px;
-  border: 1px solid #00000040;
-  color: #000000;
-  cursor: pointer;
-  user-select: none;
-}
-
-.code-chunk-c {
-  padding: 2px 5px;
-  margin: 5px 1px;
+span.code-chunk {
+  padding: 1px 1px;
+  margin: 0.5px;
   border-radius: 0;
-  border: 1px solid #00000040;
+  border: 1px solid #00000000;
   color: #000000;
-  cursor: pointer;
   user-select: none;
+  cursor: pointer;
 }
 
-.code-chunk-r {
-  padding: 2px 5px;
-  margin: 5px 5px 5px 1px;
-  border-radius: 0 5px 5px 0;
-  border: 1px solid #00000040;
-  color: #000000;
-  cursor: pointer;
-  user-select: none;
+.code-indent + span.code-chunk {
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+span.code-chunk:last-child {
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
 }
 
 .code-chunk-selected {
-  border: 1px solid #000000;
+  border-color: #000000;
   background-color: #000000;
   color: #ffffff;
 }
@@ -82,9 +63,9 @@ body {
 }
 
 .float-btn {
-  opacity: 0.7;
+  opacity: 0.75;
   position: fixed;
-  right: 4px;
+  left: 4px;
   top: 4px;
 }
 
